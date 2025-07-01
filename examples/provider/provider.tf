@@ -1,6 +1,8 @@
 provider "atlassian-operations" {
-  cloud_id      = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  domain_name   = "xxxx.atlassian.net"
-  email_address = "email@example.com"
-  token         = "<YOUR_TOKEN_HERE>"
+  cloud_id        = var.atlassian_cloud_id
+  domain_name     = var.atlassian_domain_name
+  email_address   = var.atlassian_email_address
+  token           = var.atlassian_token
+  org_admin_token = var.atlassian_org_admin_token
+  product_type    = var.atlassian_product_type
 }
