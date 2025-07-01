@@ -34,14 +34,17 @@ And the following data sources:
 
 The process to run the provider in a local environment requires the following steps:
 
-1. [Check the Requirements and install the missing components](#1-requirements)
-2. [Clone this repository](#2-cloning-the-repository)
-3. [Compile & install the provider binary](#3-compiling--installing)
-4. [Set local overrides, so terraform uses your local version of the provider](#4-setting-local-overrides)
-5. [Debugging](#5-debugging)
-   1. [Create a simple .tf file](#51-create-a-simple-maintf-file)
-   2. [Enable debugging](#52-enable-debugging)
-6. [Running Acceptance Tests](#6-running-acceptance-tests)
+- [Atlassian Operations Terraform Provider](#atlassian-operations-terraform-provider)
+    - [Related Links](#related-links)
+  - [How To Run Locally](#how-to-run-locally)
+    - [1. Requirements](#1-requirements)
+    - [2. Cloning the repository](#2-cloning-the-repository)
+    - [3. Compiling \& Installing](#3-compiling--installing)
+    - [4. Setting local overrides](#4-setting-local-overrides)
+    - [5. Debugging](#5-debugging)
+      - [5.1 Create a simple `main.tf` file:](#51-create-a-simple-maintf-file)
+      - [5.2. Enable Debugging](#52-enable-debugging)
+    - [6. Running Acceptance Tests](#6-running-acceptance-tests)
 
 ### 1. Requirements
 
@@ -115,12 +118,12 @@ provider_installation {
 }
 
 provider "atlassian-operations" {
-   cloud_id = "<YOUR_CLOUD_ID>"
-   domain_name="<YOUR_DOMAIN>"      // e.g. domain.atlassian.net
-   email_address = "<YOUR_EMAIL_ADDRESS>"     // e.g. user@example.com
-   token = "<YOUR_TOKEN_HERE>"   // API token created in Atlassian account settings
-   org_admin_token = "<YOUR_ORGANIZATION_ADMIN_TOKEN>"   // **NON-SCOPED** API Token created in Organization administration (only required for Compass)
-   product_type = "<YOUR_ATLASSIAN_OPERATIONS_PRODUCT>"   // jira-service-desk (default) or compass
+   cloud_id        = var.atlassian_cloud_id
+   domain_name     = var.atlassian_domain_name
+   email_address   = var.atlassian_email_address
+   token           = var.atlassian_token
+   org_admin_token = var.atlassian_org_admin_token
+   product_type    = var.atlassian_product_type
 }
 
 data "atlassian-operations_user" "example" {
@@ -133,7 +136,37 @@ output "example" {
 }
    ```
 
-Instead of providing values in the _provider_ block directly, you can also set the following environment variables:
+   You'll also need a `variables.tf` file (see the root directory for the complete variable definitions).
+
+Instead of providing values in the _provider_ block directly, you can use environment variables in two ways:
+
+**Option 1: Using .env file (Recommended)**
+
+1. Copy the example environment file:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Edit the `.env` file and fill in your actual values:
+   ```bash
+   TF_VAR_atlassian_cloud_id=your_actual_cloud_id
+   TF_VAR_atlassian_domain_name=your_domain.atlassian.net
+   TF_VAR_atlassian_email_address=user@example.com
+   TF_VAR_atlassian_token=your_api_token_here
+   TF_VAR_atlassian_org_admin_token=your_org_admin_token
+   TF_VAR_atlassian_product_type=jira-service-desk
+   ```
+
+3. Source the environment variables before running Terraform:
+   ```bash
+   source .env
+   terraform plan
+   terraform apply
+   ```
+
+**Option 2: Direct environment variables**
+
+You can also set the following environment variables directly:
 
 ```bash
 export ATLASSIAN_OPS_CLOUD_ID=YOUR_CLOUD_ID
@@ -143,6 +176,8 @@ export ATLASSIAN_OPS_API_TOKEN=YOUR_TOKEN
 export ATLASSIAN_OPS_API_ORG_ADMIN_TOKEN=YOUR_ORGANIZATION_ADMIN_TOKEN
 export ATLASSIAN_OPS_PRODUCT_TYPE=YOUR_ATLASSIAN_OPERATIONS_PRODUCT
 ```
+
+**Note:** The `.env` file approach is recommended as it keeps your secrets out of version control and makes it easier to manage different environments.
 
 #### 5.2. Enable Debugging
 
@@ -207,22 +242,50 @@ More information on how to use Delve with Terraform can be found in the
 [Terraform documentation](https://developer.hashicorp.com/terraform/plugin/debugging).
 
 ### 6. Running Acceptance Tests
-To run the acceptance tests, additional to the ones specified in the [Debugging](#51-create-a-simple-maintf-file) section, you need to set
-the following environment variables as well:
+To run the acceptance tests, you need to set the provider configuration environment variables (as described in the [Debugging](#51-create-a-simple-maintf-file) section) plus additional test-specific environment variables.
+
+**Option 1: Using .env.test file (Recommended)**
+
+1. Copy the test environment template:
+   ```bash
+   cp .env.test.example .env.test
+   ```
+
+2. Edit the `.env.test` file with your actual values (includes both provider config and test variables)
+
+3. Source the environment and run tests:
+   ```bash
+   source .env.test
+   cd internal/provider
+   go test -count=1 -v
+   ```
+
+**Option 2: Direct environment variables**
+
+Set all required environment variables directly:
 
 ```bash
+# Provider configuration (same as debugging section)
+export ATLASSIAN_OPS_CLOUD_ID=YOUR_CLOUD_ID
+export ATLASSIAN_OPS_DOMAIN_NAME=YOUR_DOMAIN
+export ATLASSIAN_OPS_API_EMAIL_ADDRESS=YOUR_EMAIL_ADDRESS
+export ATLASSIAN_OPS_API_TOKEN=YOUR_TOKEN
+export ATLASSIAN_OPS_API_ORG_ADMIN_TOKEN=YOUR_ORGANIZATION_ADMIN_TOKEN
+export ATLASSIAN_OPS_PRODUCT_TYPE=YOUR_ATLASSIAN_OPERATIONS_PRODUCT
+
+# Test-specific variables
 export ATLASSIAN_ACCTEST_EMAIL_PRIMARY=USER_EMAIL
 export ATLASSIAN_ACCTEST_EMAIL_SECONDARY=ANOTHER_USER_EMAIL
 export ATLASSIAN_ACCTEST_ORGANIZATION_ID=ORGANIZATION_ID
 export TF_ACC=1
 ```
 
-Acceptance tests do not require a main.tf file to be present, as they are run directly from the test files. To run the acceptance tests,
-simply run the following commands:
-
+Then run the tests:
 ```bash
 cd internal/provider
 go test -count=1 -v
 ```
+
+Acceptance tests do not require a main.tf file to be present, as they are run directly from the test files.
 
 **Keep in mind that running acceptance tests will work on your existing site, which can result in notification emails being sent and extra usage fees.**
